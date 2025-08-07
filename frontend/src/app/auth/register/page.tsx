@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +8,7 @@ import { Shield, Mail, Lock, User, Phone, MapPin, Eye, EyeOff } from 'lucide-rea
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { motion } from 'framer-motion';
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const searchParams = useSearchParams();
   const [userType, setUserType] = useState<'client' | 'employee'>(
     (searchParams.get('type') as 'client' | 'employee') || 'client'
@@ -385,5 +385,13 @@ export default function RegisterPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><LoadingSpinner size="lg" /></div>}>
+      <RegisterPageContent />
+    </Suspense>
   );
 }

@@ -82,7 +82,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const userData = {
+      const { confirmPassword, ...userData } = {
         ...formData,
         user_type: userType,
         ...(userType === 'employee' && {
@@ -90,8 +90,6 @@ export default function RegisterPage() {
           hourly_rate: parseFloat(formData.hourly_rate) || 0
         })
       };
-
-      delete userData.confirmPassword;
       await register(userData);
     } catch (error: any) {
       setErrors([error.message]);

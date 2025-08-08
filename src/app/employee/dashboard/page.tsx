@@ -295,7 +295,7 @@ export default function EmployeeDashboard() {
                     <p className="text-gray-600 mb-2">{service.service_type}</p>
                     <div className="flex items-center text-sm text-gray-500 space-x-4">
                       <div className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-1" />
+                        <CalendarIcon className="w-4 h-4 mr-1" />
                         {formatDate(service.service_date)}
                       </div>
                       <div className="flex items-center">

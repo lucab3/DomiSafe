@@ -1,3 +1,6 @@
+// Helper functions and services - NOT a serverless function
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
@@ -5,8 +8,83 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-class Employee {
-  static async findAll(filters = {}) {
+// Auth Helper Functions
+const AuthHelpers = {
+  async findUserByEmail(email) {
+    // Buscar usuario en clientes
+    let { data: client } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (client) {
+      return { ...client, user_type: 'client' };
+    }
+
+    // Buscar en empleadas
+    let { data: employee } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('email', email)
+      .single();
+    
+    if (employee) {
+      return { ...employee, user_type: 'employee' };
+    }
+
+    return null;
+  },
+
+  async createUser(userData, userType) {
+    const newUserData = {
+      email: userData.email,
+      password_hash: userData.password, // Sin bcrypt para demo
+      name: userData.name,
+      phone: userData.phone,
+      is_active: userType === 'client',
+      created_at: new Date().toISOString(),
+      ...userData
+    };
+
+    // Eliminar campos que no van en la BD
+    delete newUserData.password;
+    delete newUserData.confirmPassword;
+    delete newUserData.user_type;
+
+    if (userType === 'employee') {
+      newUserData.verification_status = 'pending';
+      newUserData.average_rating = 5.0;
+      newUserData.total_reviews = 0;
+    } else {
+      newUserData.subscription_type = 'basic';
+      newUserData.referral_code = `REF${Date.now()}${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+    }
+
+    const tableName = userType === 'client' ? 'clients' : 'employees';
+    const { data: newUser, error } = await supabase
+      .from(tableName)
+      .insert([newUserData])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { ...newUser, user_type: userType };
+  },
+
+  generateToken(payload) {
+    return jwt.sign(
+      payload,
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+  }
+};
+
+// Employee Helper Functions
+const EmployeeHelpers = {
+  async findAll(filters = {}) {
     const { zone, services, min_rating, latitude, longitude, radius = 10 } = filters;
 
     let query = supabase
@@ -40,9 +118,9 @@ class Employee {
     if (error) throw error;
 
     return employees;
-  }
+  },
 
-  static calculateDistance(lat1, lon1, lat2, lon2) {
+  calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; // Radio de la Tierra en km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -52,9 +130,9 @@ class Employee {
       Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return Math.round((R * c) * 10) / 10; // Redondear a 1 decimal
-  }
+  },
 
-  static processEmployeesWithDistance(employees, userLatitude, userLongitude, radius) {
+  processEmployeesWithDistance(employees, userLatitude, userLongitude, radius) {
     let employeesWithDistance = employees.map(emp => ({
       ...emp,
       distance_km: emp.latitude && emp.longitude 
@@ -84,41 +162,9 @@ class Employee {
 
     return employeesWithDistance;
   }
+};
 
-  static async findById(id) {
-    const { data, error } = await supabase
-      .from('employees')
-      .select(`
-        *,
-        reviews (
-          id,
-          rating,
-          comment,
-          created_at,
-          clients (
-            name,
-            photo_url
-          )
-        )
-      `)
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  static async updateStatus(id, isActive) {
-    const { data, error } = await supabase
-      .from('employees')
-      .update({ is_active: isActive })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-}
-
-module.exports = Employee;
+module.exports = {
+  AuthHelpers,
+  EmployeeHelpers
+};

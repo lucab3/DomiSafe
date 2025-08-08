@@ -1,11 +1,4 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { createClient } = require('@supabase/supabase-js');
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const { AuthHelpers } = require('../_helpers');
 
 export default async function handler(req, res) {
   // CORS headers
@@ -28,32 +21,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Email y contraseña son requeridos' });
     }
 
-    // Buscar usuario en clientes
-    let { data: client } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('email', email)
-      .single();
-
-    let user = null;
-    let user_type = null;
-
-    if (client) {
-      user = client;
-      user_type = 'client';
-    } else {
-      // Buscar en empleadas
-      let { data: employee } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('email', email)
-        .single();
-      
-      if (employee) {
-        user = employee;
-        user_type = 'employee';
-      }
-    }
+    const user = await AuthHelpers.findUserByEmail(email);
 
     if (!user) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
@@ -66,32 +34,25 @@ export default async function handler(req, res) {
 
     if (!user.is_active) {
       return res.status(401).json({ 
-        error: user_type === 'employee' 
+        error: user.user_type === 'employee' 
           ? 'Tu cuenta está pendiente de aprobación'
           : 'Tu cuenta está desactivada' 
       });
     }
 
-    const token = jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email, 
-        user_type,
-        name: user.name,
-        is_admin: user.is_admin || false
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = AuthHelpers.generateToken({
+      id: user.id, 
+      email: user.email, 
+      user_type: user.user_type,
+      name: user.name,
+      is_admin: user.is_admin || false
+    });
 
     const { password_hash, ...userWithoutPassword } = user;
 
     return res.json({
       message: 'Inicio de sesión exitoso',
-      user: {
-        ...userWithoutPassword,
-        user_type
-      },
+      user: userWithoutPassword,
       token
     });
   } catch (error) {

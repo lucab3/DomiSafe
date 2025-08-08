@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
 class AuthService {
   static generateToken(payload) {
@@ -86,4 +86,4 @@ class AuthService {
   }
 }
 
-module.exports = AuthService;
+export default AuthService;

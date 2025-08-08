@@ -1,6 +1,6 @@
-import AuthController from '../controllers/AuthController.js';
+const AuthService = require('../services/AuthService');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -15,9 +15,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    return await AuthController.register(req, res);
+    const { email, password, name, phone, user_type, ...additionalData } = req.body;
+
+    if (!email || !password || !name || !phone || !user_type) {
+      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    }
+
+    const userData = {
+      email,
+      password,
+      name,
+      phone,
+      user_type,
+      ...additionalData
+    };
+
+    const result = await AuthService.register(userData);
+    
+    return res.status(201).json(result);
   } catch (error) {
     console.error('Register API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(400).json({ error: error.message });
   }
 }

@@ -1,6 +1,6 @@
-import AuthController from '../controllers/AuthController.js';
+const jwt = require('jsonwebtoken');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -15,9 +15,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    return await AuthController.verify(req, res);
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    return res.json({
+      user: decoded,
+      message: 'Token válido'
+    });
   } catch (error) {
     console.error('Verify API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(401).json({ error: 'Token inválido' });
   }
 }

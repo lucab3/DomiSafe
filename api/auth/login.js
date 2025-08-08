@@ -1,6 +1,6 @@
-import AuthController from '../controllers/AuthController.js';
+const AuthService = require('../services/AuthService');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -15,9 +15,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    return await AuthController.login(req, res);
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+    }
+
+    const result = await AuthService.login(email, password);
+    
+    return res.json(result);
   } catch (error) {
     console.error('Login API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(401).json({ error: error.message });
   }
 }

@@ -1,5 +1,5 @@
-import bcrypt from 'bcryptjs';
-import { createClient } from '@supabase/supabase-js';
+const bcrypt = require('bcryptjs');
+const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -96,4 +96,4 @@ class User {
   }
 }
 
-export default User;
+module.exports = User;

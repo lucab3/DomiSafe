@@ -449,17 +449,28 @@ export default function AdminDashboard() {
                 {pendingRequests.map((request: any) => (
                   <div key={request.id} className="card p-6">
                     <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">
-                          Solicitud General
-                        </h4>
-                        <p className="text-sm text-gray-600">
-                          {new Date(request.created_at).toLocaleDateString('es-AR')}
-                        </p>
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
+                          <Users className="w-6 h-6 text-primary-600" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900">
+                            {request.clients?.name || 'Cliente'}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {request.clients?.email} • {new Date(request.created_at).toLocaleDateString('es-AR')}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            📱 {request.clients?.phone} • 📍 {request.clients?.address}
+                          </p>
+                        </div>
                       </div>
-                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
-                        Pendiente
-                      </span>
+                      <div className="text-right">
+                        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+                          {request.status === 'pending' ? 'Pendiente' : 'Confirmado'}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">#{request.id}</p>
+                      </div>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-6 mb-6">
@@ -596,20 +607,23 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {/* Mock data */}
+                    {/* Mock data with photos */}
                     {[
-                      { name: 'Rosa Martínez', zone: 'Palermo', rating: 4.8, status: 'active' },
-                      { name: 'Carmen Rodríguez', zone: 'Recoleta', rating: 4.9, status: 'active' },
-                      { name: 'Lucía Fernández', zone: 'Villa Crespo', rating: 4.7, status: 'working' }
+                      { name: 'Rosa Martínez', zone: 'Palermo', rating: 4.8, status: 'active', photo: 'https://images.unsplash.com/photo-1494790108755-2616c0763c99?w=400' },
+                      { name: 'Carmen Rodríguez', zone: 'Recoleta', rating: 4.9, status: 'active', photo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400' },
+                      { name: 'Lucía Fernández', zone: 'Villa Crespo', rating: 4.7, status: 'working', photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400' }
                     ].map((employee, index) => (
                       <tr key={index}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                              {employee.name.charAt(0)}
-                            </div>
+                            <img 
+                              src={employee.photo} 
+                              alt={employee.name}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{employee.name}</div>
+                              <div className="text-sm text-gray-500">ID: EMP-{String(index + 1).padStart(3, '0')}</div>
                             </div>
                           </div>
                         </td>

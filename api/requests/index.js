@@ -74,42 +74,102 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const { client_id, employee_id, status, admin_view } = req.query;
 
-      let query = supabase.from('service_requests').select(`
-        *,
-        clients!service_requests_client_id_fkey (
-          id, name, email, phone, address
-        ),
-        employees!service_requests_employee_id_fkey (
-          id, name, photo_url, services_offered, hourly_rate, average_rating
-        )
-      `);
+      // Mock data para demo
+      const mockRequests = [
+        {
+          id: '1',
+          client_id: 'client_1',
+          employee_id: null,
+          service_type: 'Limpieza general y cocina',
+          preferred_zone: 'Palermo, Ciudad Autónoma de Buenos Aires',
+          max_hourly_rate: 1500,
+          preferred_schedule: 'Lunes a Viernes 9:00-13:00',
+          additional_comments: 'Necesito ayuda con limpieza profunda y preparación de comidas. Tengo mascota (perro pequeño).',
+          request_type: 'general',
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          clients: {
+            id: 'client_1',
+            name: 'María García',
+            email: 'maria.garcia@email.com',
+            phone: '+54 11 4567-8901',
+            address: 'Av. Santa Fe 1234, Palermo'
+          }
+        },
+        {
+          id: '2',
+          client_id: 'client_2',
+          employee_id: null,
+          service_type: 'Cuidado de adultos mayores',
+          preferred_zone: 'Recoleta, Ciudad Autónoma de Buenos Aires',
+          max_hourly_rate: 2000,
+          preferred_schedule: 'Lunes a Sábado 8:00-16:00',
+          additional_comments: 'Para acompañar a mi madre de 78 años. Necesita ayuda con medicación y movilidad.',
+          request_type: 'general',
+          status: 'pending',
+          created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Ayer
+          clients: {
+            id: 'client_2',
+            name: 'Roberto Fernández',
+            email: 'roberto.fernandez@email.com',
+            phone: '+54 11 5678-9012',
+            address: 'Av. Alvear 567, Recoleta'
+          }
+        },
+        {
+          id: '3',
+          client_id: 'client_3',
+          employee_id: 'emp_1',
+          service_type: 'Niñera y limpieza',
+          preferred_zone: 'Belgrano, Ciudad Autónoma de Buenos Aires',
+          max_hourly_rate: 1800,
+          preferred_schedule: 'Martes y Jueves 14:00-18:00',
+          additional_comments: 'Para cuidar dos niños de 5 y 8 años después del colegio.',
+          request_type: 'direct',
+          status: 'confirmed',
+          created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // Hace 2 días
+          clients: {
+            id: 'client_3',
+            name: 'Ana López',
+            email: 'ana.lopez@email.com',
+            phone: '+54 11 6789-0123',
+            address: 'Av. Cabildo 890, Belgrano'
+          },
+          employees: {
+            id: 'emp_1',
+            name: 'Rosa Martínez',
+            photo_url: 'https://images.unsplash.com/photo-1494790108755-2616c0763c99?w=400',
+            services_offered: ['cleaning', 'babysitting'],
+            hourly_rate: 1200,
+            average_rating: 4.8
+          }
+        }
+      ];
+
+      let filteredRequests = mockRequests;
 
       if (client_id) {
-        query = query.eq('client_id', client_id);
+        filteredRequests = filteredRequests.filter(req => req.client_id === client_id);
       }
       
       if (employee_id) {
-        query = query.eq('employee_id', employee_id);
+        filteredRequests = filteredRequests.filter(req => req.employee_id === employee_id);
       }
       
       if (status) {
-        query = query.eq('status', status);
+        filteredRequests = filteredRequests.filter(req => req.status === status);
       }
 
       // Para vista admin, incluir solicitudes generales pendientes
       if (admin_view === 'true') {
-        query = query.or('employee_id.is.null,status.eq.pending');
+        filteredRequests = filteredRequests.filter(req => 
+          req.employee_id === null || req.status === 'pending'
+        );
       }
-
-      query = query.order('created_at', { ascending: false });
-
-      const { data: requests, error } = await query;
-      
-      if (error) throw error;
 
       return res.json({
         success: true,
-        requests: requests || []
+        requests: filteredRequests
       });
     }
 

@@ -72,18 +72,60 @@ export default function InteractiveMap({
   return (
     <div className="relative border border-gray-300 rounded-lg overflow-hidden">
       <div 
-        className="relative bg-gradient-to-br from-green-200 via-blue-200 to-blue-300 cursor-crosshair"
+        className="relative cursor-crosshair overflow-hidden"
         style={{ height }}
         onClick={handleMapClick}
       >
-        {/* Simulación de calles */}
+        {/* Fondo tipo mapa de Buenos Aires */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1), rgba(255,255,255,0.1)), 
+                             url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e5e7eb' fill-opacity='0.3'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            backgroundColor: '#f3f4f6'
+          }}
+        />
+        
+        {/* Simulación de área metropolitana de Buenos Aires */}
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-0 right-0 h-0.5 bg-gray-400 opacity-50" />
-          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-400 opacity-50" />
-          <div className="absolute top-3/4 left-0 right-0 h-0.5 bg-gray-400 opacity-50" />
-          <div className="absolute top-0 bottom-0 left-1/4 w-0.5 bg-gray-400 opacity-50" />
-          <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-gray-400 opacity-50" />
-          <div className="absolute top-0 bottom-0 left-3/4 w-0.5 bg-gray-400 opacity-50" />
+          {/* Rio de la Plata (arriba) */}
+          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-blue-300 to-blue-200 opacity-60" />
+          
+          {/* Calles principales */}
+          <div className="absolute top-20 left-0 right-0 h-1 bg-yellow-400 opacity-70" /> {/* Av. del Libertador */}
+          <div className="absolute top-32 left-0 right-0 h-1 bg-yellow-400 opacity-70" /> {/* Av. Santa Fe */}
+          <div className="absolute top-44 left-0 right-0 h-1 bg-yellow-400 opacity-70" /> {/* Av. Corrientes */}
+          <div className="absolute top-56 left-0 right-0 h-1 bg-yellow-400 opacity-70" /> {/* Av. Rivadavia */}
+          
+          {/* Calles verticales */}
+          <div className="absolute top-16 bottom-0 left-1/6 w-0.5 bg-gray-500 opacity-40" />
+          <div className="absolute top-16 bottom-0 left-2/6 w-1 bg-yellow-400 opacity-70" /> {/* Av. 9 de Julio */}
+          <div className="absolute top-16 bottom-0 left-3/6 w-0.5 bg-gray-500 opacity-40" />
+          <div className="absolute top-16 bottom-0 left-4/6 w-0.5 bg-gray-500 opacity-40" />
+          <div className="absolute top-16 bottom-0 left-5/6 w-0.5 bg-gray-500 opacity-40" />
+          
+          {/* Zonas identificables */}
+          {/* Puerto Madero */}
+          <div className="absolute top-44 left-2/6 w-8 h-8 bg-blue-100 opacity-50 rounded" />
+          
+          {/* Parque 3 de Febrero (Palermo) */}
+          <div className="absolute top-28 left-1/6 w-12 h-6 bg-green-300 opacity-60 rounded" />
+          
+          {/* Plaza San Martin */}
+          <div className="absolute top-36 left-2/6 w-4 h-4 bg-green-300 opacity-60 rounded-full" />
+          
+          {/* Retiro (estación) */}
+          <div className="absolute top-24 left-2/6 w-3 h-3 bg-red-400 opacity-70 rounded" />
+        </div>
+        
+        {/* Grid sutil */}
+        <div className="absolute inset-0 opacity-20">
+          {[...Array(10)].map((_, i) => (
+            <div key={`h-${i}`} className="absolute left-0 right-0 h-px bg-gray-300" style={{ top: `${i * 10}%` }} />
+          ))}
+          {[...Array(10)].map((_, i) => (
+            <div key={`v-${i}`} className="absolute top-0 bottom-0 w-px bg-gray-300" style={{ left: `${i * 10}%` }} />
+          ))}
         </div>
 
         {/* Marcadores de empleadas */}

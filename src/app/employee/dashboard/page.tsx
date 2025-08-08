@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
+import Calendar from '@/components/Calendar';
 import { 
-  Calendar, 
+  Calendar as CalendarIcon, 
   Clock, 
   MapPin, 
   Star, 
@@ -47,6 +48,18 @@ export default function EmployeeDashboard() {
     pending_requests: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: user?.name || '',
+    phone: '+54 11 1234-5678',
+    address: 'Av. Corrientes 1234, CABA',
+    services: ['cleaning', 'cooking'],
+    hourly_rate: 1200,
+    availability: 'Lunes a Viernes 9:00-17:00',
+    languages: ['Español', 'Inglés'],
+    experience_description: 'Tengo 8 años de experiencia en limpieza y cocina. Me especializo en cocina casera argentina.',
+    references: 'María González - Tel: +54 11 9876-5432'
+  });
 
   useEffect(() => {
     if (user) {
@@ -150,7 +163,10 @@ export default function EmployeeDashboard() {
               <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
                 <Bell className="w-5 h-5" />
               </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+              <button 
+                onClick={() => setShowProfileEdit(true)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
                 <Settings className="w-5 h-5" />
               </button>
               <button 
@@ -181,7 +197,7 @@ export default function EmployeeDashboard() {
           >
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-primary-100">
-                <Calendar className="w-6 h-6 text-primary-600" />
+                <CalendarIcon className="w-6 h-6 text-primary-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-600">Servicios totales</p>
@@ -241,6 +257,20 @@ export default function EmployeeDashboard() {
             </div>
           </motion.div>
         </div>
+
+        {/* Calendar Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mb-8"
+        >
+          <Calendar 
+            onEventClick={(event) => {
+              alert(`Servicio: ${event.title}\nCliente: ${event.client}\nHorario: ${event.time}`);
+            }}
+          />
+        </motion.div>
 
         {/* Services Section */}
         <div className="card p-6">
@@ -314,6 +344,181 @@ export default function EmployeeDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Modal de edición de perfil */}
+      {showProfileEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-900">Editar Perfil</h2>
+                <button
+                  onClick={() => setShowProfileEdit(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <form className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nombre completo
+                  </label>
+                  <input
+                    type="text"
+                    value={profileData.name}
+                    onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Teléfono
+                  </label>
+                  <input
+                    type="tel"
+                    value={profileData.phone}
+                    onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                    className="input-field"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Dirección
+                  </label>
+                  <input
+                    type="text"
+                    value={profileData.address}
+                    onChange={(e) => setProfileData({...profileData, address: e.target.value})}
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tarifa por hora ($)
+                  </label>
+                  <input
+                    type="number"
+                    value={profileData.hourly_rate}
+                    onChange={(e) => setProfileData({...profileData, hourly_rate: parseInt(e.target.value)})}
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Disponibilidad
+                  </label>
+                  <input
+                    type="text"
+                    value={profileData.availability}
+                    onChange={(e) => setProfileData({...profileData, availability: e.target.value})}
+                    className="input-field"
+                    placeholder="Ej: Lunes a Viernes 9:00-17:00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Servicios ofrecidos
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['cleaning', 'cooking', 'babysitting', 'elderly_care', 'event'].map((service) => (
+                      <label key={service} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={profileData.services.includes(service)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setProfileData({...profileData, services: [...profileData.services, service]});
+                            } else {
+                              setProfileData({...profileData, services: profileData.services.filter(s => s !== service)});
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <span className="text-sm">
+                          {service === 'cleaning' ? 'Limpieza' :
+                           service === 'cooking' ? 'Cocina' :
+                           service === 'babysitting' ? 'Niñera' :
+                           service === 'elderly_care' ? 'Adultos mayores' :
+                           'Eventos'}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Idiomas
+                  </label>
+                  <input
+                    type="text"
+                    value={profileData.languages.join(', ')}
+                    onChange={(e) => setProfileData({...profileData, languages: e.target.value.split(', ')})}
+                    className="input-field"
+                    placeholder="Español, Inglés, Italiano"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descripción de experiencia
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={profileData.experience_description}
+                    onChange={(e) => setProfileData({...profileData, experience_description: e.target.value})}
+                    className="input-field"
+                    placeholder="Describe tu experiencia y especialidades..."
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Referencias
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={profileData.references}
+                    onChange={(e) => setProfileData({...profileData, references: e.target.value})}
+                    className="input-field"
+                    placeholder="Referencias de trabajos anteriores..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowProfileEdit(false)}
+                  className="btn-outline"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // TODO: Implementar guardado
+                    alert('Perfil actualizado exitosamente');
+                    setShowProfileEdit(false);
+                  }}
+                  className="btn-primary"
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

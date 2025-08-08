@@ -18,7 +18,8 @@ import {
   EyeOff,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  LogOut
 } from 'lucide-react';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { motion } from 'framer-motion';
@@ -33,7 +34,7 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [showEmployeesToClients, setShowEmployeesToClients] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
@@ -174,12 +175,24 @@ export default function AdminDashboard() {
                 </div>
               )}
               
+              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <Settings className="w-5 h-5" />
+              </button>
+              
               <span className="text-sm text-gray-600">Admin: {user?.name}</span>
               <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-red-600">
                   {user?.name?.charAt(0).toUpperCase()}
                 </span>
               </div>
+              
+              <button 
+                onClick={logout}
+                className="flex items-center space-x-2 px-3 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Salir</span>
+              </button>
             </div>
           </div>
         </div>

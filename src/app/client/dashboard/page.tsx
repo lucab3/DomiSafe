@@ -12,7 +12,10 @@ import {
   Calendar,
   Users,
   TrendingUp,
-  Shield
+  Shield,
+  LogOut,
+  Bell,
+  Settings
 } from 'lucide-react';
 import EmployeeCard from '@/components/cards/EmployeeCard';
 import FilterPanel from '@/components/FilterPanel';
@@ -35,7 +38,7 @@ interface Employee {
 }
 
 export default function ClientDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -262,12 +265,25 @@ export default function ClientDashboard() {
             </div>
             
             <div className="flex items-center space-x-4">
+              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <Bell className="w-5 h-5" />
+              </button>
+              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <Settings className="w-5 h-5" />
+              </button>
               <span className="text-sm text-gray-600">Bienvenido, {user?.name}</span>
               <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-primary-600">
                   {user?.name?.charAt(0).toUpperCase()}
                 </span>
               </div>
+              <button 
+                onClick={logout}
+                className="flex items-center space-x-2 px-3 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Salir</span>
+              </button>
             </div>
           </div>
         </div>

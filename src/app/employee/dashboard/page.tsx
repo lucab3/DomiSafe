@@ -82,7 +82,7 @@ export default function EmployeeDashboard() {
 
       setStats({
         total_services: 24,
-        average_rating: user?.average_rating || 4.8,
+        average_rating: 4.8, // Valor fijo para demo
         total_earnings: 28500,
         pending_requests: 3
       });

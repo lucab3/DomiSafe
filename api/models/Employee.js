@@ -1,7 +1,14 @@
-const supabase = require('../config/supabase');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 class Employee {
   static async findAll(filters = {}) {
+    const { zone, services, min_rating, latitude, longitude, radius = 10 } = filters;
+
     let query = supabase
       .from('employees')
       .select(`
@@ -10,31 +17,72 @@ class Employee {
           rating,
           comment,
           created_at
-        ),
-        services_count:services(count)
+        )
       `)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .eq('verification_status', 'approved');
 
-    if (filters.zone) {
-      query = query.ilike('zone', `%${filters.zone}%`);
+    if (zone) {
+      query = query.ilike('zone', `%${zone}%`);
     }
 
-    if (filters.services) {
-      query = query.contains('services_offered', filters.services);
+    if (services) {
+      const serviceArray = services.split(',');
+      query = query.contains('services_offered', serviceArray);
     }
 
-    if (filters.min_rating) {
-      query = query.gte('average_rating', filters.min_rating);
+    if (min_rating) {
+      query = query.gte('average_rating', parseFloat(min_rating));
     }
 
-    if (filters.languages) {
-      query = query.contains('languages', filters.languages);
-    }
-
-    const { data, error } = await query.order('average_rating', { ascending: false });
+    const { data: employees, error } = await query.order('average_rating', { ascending: false });
     
     if (error) throw error;
-    return data;
+
+    return employees;
+  }
+
+  static calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Radio de la Tierra en km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return Math.round((R * c) * 10) / 10; // Redondear a 1 decimal
+  }
+
+  static processEmployeesWithDistance(employees, userLatitude, userLongitude, radius) {
+    let employeesWithDistance = employees.map(emp => ({
+      ...emp,
+      distance_km: emp.latitude && emp.longitude 
+        ? this.calculateDistance(
+            parseFloat(userLatitude), 
+            parseFloat(userLongitude), 
+            parseFloat(emp.latitude), 
+            parseFloat(emp.longitude)
+          ) 
+        : null
+    }));
+
+    // Filtrar por radio si se especifica
+    if (radius) {
+      employeesWithDistance = employeesWithDistance.filter(emp => 
+        !emp.distance_km || emp.distance_km <= parseFloat(radius)
+      );
+    }
+
+    // Ordenar por distancia, luego por rating
+    employeesWithDistance.sort((a, b) => {
+      if (a.distance_km !== b.distance_km) {
+        return (a.distance_km || 999) - (b.distance_km || 999);
+      }
+      return b.average_rating - a.average_rating;
+    });
+
+    return employeesWithDistance;
   }
 
   static async findById(id) {
@@ -47,13 +95,10 @@ class Employee {
           rating,
           comment,
           created_at,
-          client:clients(name)
-        ),
-        services (
-          id,
-          service_date,
-          status,
-          client:clients(name)
+          clients (
+            name,
+            photo_url
+          )
         )
       `)
       .eq('id', id)
@@ -63,94 +108,16 @@ class Employee {
     return data;
   }
 
-  static async create(employeeData) {
+  static async updateStatus(id, isActive) {
     const { data, error } = await supabase
       .from('employees')
-      .insert([employeeData])
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  static async update(id, updateData) {
-    const { data, error } = await supabase
-      .from('employees')
-      .update(updateData)
+      .update({ is_active: isActive })
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
     return data;
-  }
-
-  static async delete(id) {
-    const { data, error } = await supabase
-      .from('employees')
-      .update({ is_active: false })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  static async findByLocation(latitude, longitude, radiusKm = 10) {
-    const { data, error } = await supabase
-      .rpc('employees_near_location', {
-        lat: latitude,
-        lng: longitude,
-        radius_km: radiusKm
-      });
-
-    if (error) throw error;
-    return data;
-  }
-
-  static async updateAvailability(id, availability) {
-    const { data, error } = await supabase
-      .from('employees')
-      .update({ 
-        availability: availability,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  static async updateRating(employeeId) {
-    const { data: reviews, error: reviewsError } = await supabase
-      .from('reviews')
-      .select('rating')
-      .eq('employee_id', employeeId);
-
-    if (reviewsError) throw reviewsError;
-
-    if (reviews && reviews.length > 0) {
-      const avgRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
-      
-      const { data, error } = await supabase
-        .from('employees')
-        .update({ 
-          average_rating: Math.round(avgRating * 10) / 10,
-          total_reviews: reviews.length
-        })
-        .eq('id', employeeId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    }
-    
-    return null;
   }
 }
 

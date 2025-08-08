@@ -597,7 +597,7 @@ export default function ClientDashboard() {
               </h3>
               <InteractiveMap
                 showEmployees={true}
-                initialLocation={userLocation}
+                initialLocation={userLocation || undefined}
                 onLocationSelect={(location) => {
                   setUserLocation(location);
                   // Recargar empleadas cercanas

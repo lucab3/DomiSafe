@@ -20,6 +20,8 @@ import {
 import EmployeeCard from '@/components/cards/EmployeeCard';
 import FilterPanel from '@/components/FilterPanel';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import LocationInput from '@/components/LocationInput';
+import InteractiveMap from '@/components/InteractiveMap';
 import { motion } from 'framer-motion';
 
 interface Employee {
@@ -45,6 +47,11 @@ export default function ClientDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [showEmployees, setShowEmployees] = useState(true);
+  const [requestForm, setRequestForm] = useState({
+    service_description: '',
+    additional_comments: ''
+  });
 
   const [filters, setFilters] = useState({
     zone: '',
@@ -131,7 +138,7 @@ export default function ClientDashboard() {
   ];
 
   useEffect(() => {
-    loadEmployees();
+    loadSettings();
     getUserLocation();
   }, []);
 
@@ -139,11 +146,33 @@ export default function ClientDashboard() {
     applyFilters();
   }, [employees, searchTerm, filters]);
 
-  const loadEmployees = async () => {
+  const loadSettings = async () => {
     try {
       setIsLoading(true);
+      // Primero cargar configuración
+      const settingsResponse = await fetch('/api/admin/settings');
+      if (settingsResponse.ok) {
+        const settingsData = await settingsResponse.json();
+        setShowEmployees(settingsData.show_employees_to_clients);
+        
+        // Solo cargar empleadas si están visibles
+        if (settingsData.show_employees_to_clients) {
+          await loadEmployees();
+        }
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      // En caso de error, mostrar empleadas por defecto
+      await loadEmployees();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadEmployees = async () => {
+    try {
       // Simular llamada a API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       setEmployees(mockEmployees);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -165,6 +194,93 @@ export default function ClientDashboard() {
           console.log('Error getting location:', error);
         }
       );
+    }
+  };
+
+  const handleRequestEmployee = async (employeeId: string) => {
+    try {
+      const employee = employees.find(emp => emp.id === employeeId);
+      
+      const response = await fetch('/api/requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          client_id: user?.id,
+          employee_id: employeeId,
+          service_type: employee?.services_offered.join(', ') || 'Servicios generales',
+          preferred_zone: employee?.zone,
+          request_type: 'direct',
+          additional_comments: `Solicitud directa para ${employee?.name}`
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`¡Solicitud enviada a ${employee?.name}! Te contactarán pronto.`);
+      } else {
+        throw new Error(data.message || 'Error al enviar solicitud');
+      }
+    } catch (error) {
+      console.error('Error sending request:', error);
+      alert('Error al enviar la solicitud. Intenta nuevamente.');
+    }
+  };
+
+  const handleFavoriteEmployee = (employeeId: string) => {
+    // TODO: Implementar funcionalidad de favoritos
+    console.log('Added to favorites:', employeeId);
+  };
+
+  const handleViewEmployeeDetails = (employeeId: string) => {
+    // TODO: Implementar vista de detalles de empleada
+    console.log('View details:', employeeId);
+  };
+
+  const handleGeneralRequest = async () => {
+    try {
+      const response = await fetch('/api/requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          client_id: user?.id,
+          service_type: requestForm.service_description,
+          preferred_zone: filters.zone,
+          max_hourly_rate: filters.max_rate,
+          preferred_schedule: filters.availability,
+          additional_comments: requestForm.additional_comments,
+          request_type: 'general'
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('¡Solicitud enviada! Te contactaremos pronto con sugerencias de empleadas.');
+        // Limpiar formulario
+        setRequestForm({
+          service_description: '',
+          additional_comments: ''
+        });
+        setFilters({
+          zone: '',
+          services: [],
+          min_rating: 0,
+          max_rate: 0,
+          languages: [],
+          availability: '',
+          distance: 20
+        });
+      } else {
+        throw new Error(data.message || 'Error al enviar solicitud');
+      }
+    } catch (error) {
+      console.error('Error sending general request:', error);
+      alert('Error al enviar la solicitud. Intenta nuevamente.');
     }
   };
 
@@ -381,28 +497,145 @@ export default function ClientDashboard() {
           </select>
         </div>
 
-        {/* Employee Grid */}
-        {filteredEmployees.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <Users className="w-12 h-12 text-gray-400" />
+        {/* Main Content - Conditional */}
+        {!showEmployees ? (
+          /* Formulario de Solicitud cuando empleadas están ocultas */
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-2xl mx-auto"
+          >
+            <div className="card p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-6 bg-primary-100 rounded-full flex items-center justify-center">
+                <Search className="w-8 h-8 text-primary-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Solicita tu Empleada Ideal
+              </h3>
+              <p className="text-gray-600 mb-8">
+                Completa este formulario y nuestro equipo te sugerirá las mejores empleadas según tus necesidades
+              </p>
+              
+              <form className="space-y-6 text-left">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="label-field">Zona preferida</label>
+                    <LocationInput
+                      placeholder="Ej. Palermo, Recoleta..."
+                      onLocationSelect={(location) => {
+                        setFilters({...filters, zone: location.address});
+                        setUserLocation({lat: location.lat, lng: location.lng});
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="label-field">Precio máximo por hora</label>
+                    <input
+                      type="number"
+                      className="input-field"
+                      placeholder="Ej. 1500"
+                      value={filters.max_rate || ''}
+                      onChange={(e) => setFilters({...filters, max_rate: parseInt(e.target.value) || 0})}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="label-field">Servicios necesarios</label>
+                  <textarea
+                    className="input-field"
+                    rows={3}
+                    placeholder="Describe qué servicios necesitas..."
+                    value={requestForm.service_description}
+                    onChange={(e) => setRequestForm({...requestForm, service_description: e.target.value})}
+                  />
+                </div>
+                
+                <div>
+                  <label className="label-field">Horarios preferidos</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Ej. Lunes a Viernes 9:00-17:00"
+                    value={filters.availability}
+                    onChange={(e) => setFilters({...filters, availability: e.target.value})}
+                  />
+                </div>
+                
+                <div>
+                  <label className="label-field">Comentarios adicionales</label>
+                  <textarea
+                    className="input-field"
+                    rows={3}
+                    placeholder="Cualquier preferencia especial..."
+                    value={requestForm.additional_comments}
+                    onChange={(e) => setRequestForm({...requestForm, additional_comments: e.target.value})}
+                  />
+                </div>
+                
+                <button
+                  type="button"
+                  className="w-full btn-primary py-4 text-lg font-semibold"
+                  onClick={handleGeneralRequest}
+                >
+                  Solicitar Empleadas
+                </button>
+              </form>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron empleadas</h3>
-            <p className="text-gray-600">Intenta ajustar los filtros de búsqueda</p>
-          </div>
+          </motion.div>
         ) : (
-          <div className="grid gap-6">
-            {filteredEmployees.map((employee, index) => (
-              <motion.div
-                key={employee.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <EmployeeCard employee={employee} />
-              </motion.div>
-            ))}
-          </div>
+          /* Lista de empleadas cuando están visibles */
+          <>
+            {/* Mapa Interactivo */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="card p-6 mb-8"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Empleadas cerca de ti
+              </h3>
+              <InteractiveMap
+                showEmployees={true}
+                initialLocation={userLocation}
+                onLocationSelect={(location) => {
+                  setUserLocation(location);
+                  // Recargar empleadas cercanas
+                }}
+              />
+              <div className="mt-4 text-sm text-gray-600">
+                * Las ubicaciones mostradas son aproximadas para proteger la privacidad
+              </div>
+            </motion.div>
+
+            {filteredEmployees.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                  <Users className="w-12 h-12 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron empleadas</h3>
+                <p className="text-gray-600">Intenta ajustar los filtros de búsqueda</p>
+              </div>
+            ) : (
+              <div className="grid gap-6">
+                {filteredEmployees.map((employee, index) => (
+                  <motion.div
+                    key={employee.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <EmployeeCard 
+                      employee={employee} 
+                      onRequest={handleRequestEmployee}
+                      onFavorite={handleFavoriteEmployee}
+                      onViewDetails={handleViewEmployeeDetails}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

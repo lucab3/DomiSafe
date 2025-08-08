@@ -37,6 +37,7 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [showEmployeesToClients, setShowEmployeesToClients] = useState(true);
+  const [pendingRequests, setPendingRequests] = useState([]);
   const [stats, setStats] = useState<DashboardStats>({
     total_employees: 0,
     total_clients: 0,
@@ -49,6 +50,8 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadDashboardData();
+    loadSettings();
+    loadPendingRequests();
   }, []);
 
   const loadDashboardData = async () => {
@@ -73,13 +76,75 @@ export default function AdminDashboard() {
     }
   };
 
+  const loadSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/settings');
+      if (response.ok) {
+        const data = await response.json();
+        setShowEmployeesToClients(data.show_employees_to_clients);
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
+  const loadPendingRequests = async () => {
+    try {
+      const response = await fetch('/api/requests?admin_view=true&status=pending');
+      if (response.ok) {
+        const data = await response.json();
+        setPendingRequests(data.requests || []);
+      }
+    } catch (error) {
+      console.error('Error loading requests:', error);
+    }
+  };
+
+  const assignEmployeeToRequest = async (requestId: string, employeeId: string) => {
+    try {
+      const response = await fetch(`/api/requests?request_id=${requestId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'assigned',
+          assigned_employee_id: employeeId
+        }),
+      });
+
+      if (response.ok) {
+        await loadPendingRequests(); // Recargar solicitudes
+        alert('Empleada asignada exitosamente');
+      }
+    } catch (error) {
+      console.error('Error assigning employee:', error);
+      alert('Error al asignar empleada');
+    }
+  };
+
   const toggleEmployeeVisibility = async () => {
     try {
-      setShowEmployeesToClients(!showEmployeesToClients);
-      // Aquí iría la llamada a la API para actualizar la configuración
-      console.log('Modo empleadas visibles:', !showEmployeesToClients);
+      const newValue = !showEmployeesToClients;
+      
+      const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          show_employees_to_clients: newValue
+        }),
+      });
+
+      if (response.ok) {
+        setShowEmployeesToClients(newValue);
+        console.log('Configuración actualizada - Empleadas visibles:', newValue);
+      } else {
+        throw new Error('Error al actualizar configuración');
+      }
     } catch (error) {
-      console.error('Error updating settings:', error);
+      console.error('Error toggling employee visibility:', error);
     }
   };
 
@@ -117,6 +182,7 @@ export default function AdminDashboard() {
   const tabsData = [
     { id: 'overview', label: 'Resumen', icon: TrendingUp },
     { id: 'employees', label: 'Empleadas', icon: Users },
+    { id: 'requests', label: 'Solicitudes', icon: Bell },
     { id: 'clients', label: 'Clientes', icon: UserCheck },
     { id: 'services', label: 'Servicios', icon: Calendar },
     { id: 'settings', label: 'Configuración', icon: Settings }
@@ -244,6 +310,11 @@ export default function AdminDashboard() {
                       {stats.pending_approvals}
                     </span>
                   )}
+                  {tab.id === 'requests' && pendingRequests.length > 0 && (
+                    <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                      {pendingRequests.length}
+                    </span>
+                  )}
                 </button>
               ))}
             </nav>
@@ -342,6 +413,101 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'requests' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Solicitudes de Empleadas ({pendingRequests.length})
+              </h3>
+              <button 
+                onClick={loadPendingRequests}
+                className="btn-secondary"
+              >
+                Actualizar
+              </button>
+            </div>
+
+            {pendingRequests.length === 0 ? (
+              <div className="card text-center py-12">
+                <Bell className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <h4 className="text-lg font-medium text-gray-900 mb-2">
+                  No hay solicitudes pendientes
+                </h4>
+                <p className="text-gray-600">
+                  Cuando los clientes envíen solicitudes aparecerán aquí
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {pendingRequests.map((request: any) => (
+                  <div key={request.id} className="card p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">
+                          Solicitud General
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {new Date(request.created_at).toLocaleDateString('es-AR')}
+                        </p>
+                      </div>
+                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+                        Pendiente
+                      </span>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                      <div>
+                        <h5 className="font-medium text-gray-900 mb-2">Detalles de la solicitud</h5>
+                        <div className="space-y-2 text-sm">
+                          <div><strong>Zona preferida:</strong> {request.preferred_zone || 'No especificada'}</div>
+                          <div><strong>Precio máximo:</strong> ${request.max_hourly_rate || 'Sin límite'}</div>
+                          <div><strong>Horarios:</strong> {request.preferred_schedule || 'Flexible'}</div>
+                          <div><strong>Servicios:</strong> {request.service_type}</div>
+                        </div>
+                      </div>
+                      <div>
+                        <h5 className="font-medium text-gray-900 mb-2">Comentarios adicionales</h5>
+                        <p className="text-sm text-gray-600">
+                          {request.additional_comments || 'Sin comentarios adicionales'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <h5 className="font-medium text-gray-900 mb-3">Empleadas sugeridas</h5>
+                      <div className="grid md:grid-cols-3 gap-3 mb-4">
+                        {['Rosa Martínez', 'Carmen Rodríguez', 'Lucía Fernández'].map((name, index) => (
+                          <button
+                            key={index}
+                            onClick={() => assignEmployeeToRequest(request.id, `emp_${index}`)}
+                            className="p-3 border border-gray-200 rounded-lg hover:bg-primary-50 hover:border-primary-300 transition-colors text-left"
+                          >
+                            <div className="font-medium text-gray-900">{name}</div>
+                            <div className="text-sm text-gray-600">Zona: {['Palermo', 'Recoleta', 'Villa Crespo'][index]}</div>
+                            <div className="text-sm text-gray-600">⭐ {[4.8, 4.9, 4.7][index]}</div>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex space-x-2">
+                        <button className="btn-primary">
+                          Contactar Cliente
+                        </button>
+                        <button className="btn-outline">
+                          Rechazar Solicitud
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
 

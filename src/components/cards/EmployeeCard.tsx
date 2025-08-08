@@ -33,7 +33,7 @@ interface Employee {
 
 interface EmployeeCardProps {
   employee: Employee;
-  onContact?: (employeeId: string) => void;
+  onRequest?: (employeeId: string) => void;
   onFavorite?: (employeeId: string) => void;
   onViewDetails?: (employeeId: string) => void;
 }
@@ -54,7 +54,7 @@ const statusLabels: { [key: string]: { label: string; color: string } } = {
 
 export default function EmployeeCard({ 
   employee, 
-  onContact, 
+  onRequest, 
   onFavorite, 
   onViewDetails 
 }: EmployeeCardProps) {
@@ -66,8 +66,8 @@ export default function EmployeeCard({
     onFavorite?.(employee.id);
   };
 
-  const handleContact = () => {
-    onContact?.(employee.id);
+  const handleRequest = () => {
+    onRequest?.(employee.id);
   };
 
   const handleViewDetails = () => {
@@ -201,12 +201,12 @@ export default function EmployeeCard({
           <div className="flex items-center justify-between">
             <div className="flex space-x-3">
               <button
-                onClick={handleContact}
+                onClick={handleRequest}
                 className="btn-primary flex items-center space-x-2"
                 disabled={employee.current_status === 'unavailable'}
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>Contactar</span>
+                <span>Solicitar</span>
               </button>
               
               <button

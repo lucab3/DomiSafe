@@ -34,15 +34,15 @@ export default function LoginPage() {
     switch (type) {
       case 'client':
         setEmail('maria.garcia@email.com');
-        setPassword('demo123');
+        setPassword('password123');
         break;
       case 'employee':
         setEmail('rosa.martinez@email.com');
-        setPassword('demo123');
+        setPassword('password123');
         break;
       case 'admin':
         setEmail('admin@domisafe.com');
-        setPassword('admin123');
+        setPassword('password123');
         break;
     }
   };

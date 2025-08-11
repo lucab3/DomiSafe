@@ -1,10 +1,3 @@
-const { createClient } = require('@supabase/supabase-js');
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,7 +10,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'POST') {
-      // Crear nueva solicitud
+      // Crear nueva solicitud (simulado para demo)
       const { 
         client_id, 
         employee_id, 
@@ -29,45 +22,30 @@ export default async function handler(req, res) {
         request_type = 'direct' // 'direct' para empleada específica, 'general' para solicitar sugerencias
       } = req.body;
 
-      const { data, error } = await supabase
-        .from('service_requests')
-        .insert({
-          client_id,
-          employee_id: request_type === 'direct' ? employee_id : null,
-          service_type,
-          preferred_zone,
-          max_hourly_rate,
-          preferred_schedule,
-          additional_comments,
-          request_type,
-          status: 'pending',
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+      // Simular procesamiento
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (error) throw error;
-
-      // Si es una solicitud general (sin empleada específica), crear notificación para admin
-      if (request_type === 'general') {
-        await supabase
-          .from('admin_notifications')
-          .insert({
-            type: 'new_general_request',
-            title: 'Nueva solicitud de empleada',
-            message: `Cliente solicita empleada en ${preferred_zone}`,
-            request_id: data.id,
-            is_read: false,
-            created_at: new Date().toISOString()
-          });
-      }
+      // Crear objeto de solicitud simulado
+      const newRequest = {
+        id: `req_${Date.now()}`,
+        client_id,
+        employee_id: request_type === 'direct' ? employee_id : null,
+        service_type,
+        preferred_zone,
+        max_hourly_rate,
+        preferred_schedule,
+        additional_comments,
+        request_type,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      };
 
       return res.status(201).json({
         success: true,
-        request: data,
+        request: newRequest,
         message: request_type === 'direct' 
-          ? 'Solicitud enviada a la empleada' 
-          : 'Solicitud recibida, te contactaremos con sugerencias'
+          ? 'Solicitud enviada a la empleada exitosamente' 
+          : 'Solicitud recibida exitosamente, te contactaremos pronto con sugerencias de empleadas'
       });
     }
 
@@ -192,18 +170,19 @@ export default async function handler(req, res) {
         updateData.employee_id = assigned_employee_id;
       }
 
-      const { data, error } = await supabase
-        .from('service_requests')
-        .update(updateData)
-        .eq('id', request_id)
-        .select()
-        .single();
+      // Simular actualización exitosa
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      if (error) throw error;
+      const updatedRequest = {
+        id: request_id,
+        ...updateData,
+        client_name: 'Cliente Demo',
+        service_type: 'Servicio actualizado'
+      };
 
       return res.json({
         success: true,
-        request: data,
+        request: updatedRequest,
         message: 'Solicitud actualizada exitosamente'
       });
     }

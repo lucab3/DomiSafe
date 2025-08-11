@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, MapPin, Star, DollarSign, Globe, Clock, Users } from 'lucide-react';
+import LocationInput from './LocationInput';
 
 interface Filters {
   zone: string;
@@ -33,17 +34,6 @@ const languageOptions = [
   'Portugués',
   'Italiano',
   'Francés'
-];
-
-const zoneOptions = [
-  'Palermo',
-  'Recoleta',
-  'Belgrano',
-  'Villa Crespo',
-  'San Telmo',
-  'Puerto Madero',
-  'Caballito',
-  'Barracas'
 ];
 
 const availabilityOptions = [
@@ -137,18 +127,27 @@ export default function FilterPanel({ filters, onFiltersChange, onClose }: Filte
           <div>
             <label className="label-field">
               <MapPin className="w-4 h-4 inline mr-2" />
-              Zona
+              Zona preferida
             </label>
-            <select
-              value={filters.zone}
-              onChange={(e) => handleFilterChange('zone', e.target.value)}
-              className="input-field"
-            >
-              <option value="">Todas las zonas</option>
-              {zoneOptions.map(zone => (
-                <option key={zone} value={zone}>{zone}</option>
-              ))}
-            </select>
+            <LocationInput
+              placeholder="Buscar zona o barrio..."
+              onLocationSelect={(location) => {
+                handleFilterChange('zone', location.address.split(',')[0]);
+              }}
+            />
+            {filters.zone && (
+              <div className="mt-2">
+                <span className="inline-flex items-center px-3 py-1 bg-primary-100 text-primary-700 text-sm rounded-full">
+                  {filters.zone}
+                  <button
+                    onClick={() => handleFilterChange('zone', '')}
+                    className="ml-2 hover:text-primary-900"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              </div>
+            )}
           </div>
 
           <div>

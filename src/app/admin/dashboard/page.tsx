@@ -149,7 +149,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const openEmployeeModal = (employee = null) => {
+  const openEmployeeModal = (employee: any = null) => {
     if (employee) {
       setEditingEmployee(employee);
       setEmployeeForm({
@@ -292,7 +292,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const openServiceModal = (service = null) => {
+  const openServiceModal = (service: any = null) => {
     if (service) {
       setEditingService(service);
       setServiceForm({

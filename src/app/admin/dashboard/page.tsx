@@ -36,12 +36,21 @@ interface DashboardStats {
   completed_services: number;
 }
 
+interface EmployeeRegistration {
+  id: string;
+  status: string;
+  name: string;
+  email: string;
+  phone: string;
+  [key: string]: any;
+}
+
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [showEmployeesToClients, setShowEmployeesToClients] = useState(true);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
-  const [employeeRegistrations, setEmployeeRegistrations] = useState<any[]>([]);
+  const [employeeRegistrations, setEmployeeRegistrations] = useState<EmployeeRegistration[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<any>(null);
@@ -147,7 +156,7 @@ export default function AdminDashboard() {
         setEmployeeRegistrations(data.registrations || []);
         
         // Update pending approvals count
-        const pendingCount = data.registrations?.filter(reg => reg.status === 'pending').length || 0;
+        const pendingCount = data.registrations?.filter((reg: EmployeeRegistration) => reg.status === 'pending').length || 0;
         setStats(prev => ({ ...prev, pending_approvals: pendingCount }));
       }
     } catch (error) {

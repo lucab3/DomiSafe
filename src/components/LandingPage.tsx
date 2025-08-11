@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import AutocompleteInput from './AutocompleteInput';
 import { 
   Shield, 
   Star, 
@@ -63,10 +65,31 @@ const services = [
 
 export default function LandingPage() {
   const [isVisible, setIsVisible] = useState(false);
+  const [searchLocation, setSearchLocation] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     setIsVisible(true);
   }, []);
+
+  const handleLocationSelect = (place: any, coordinates: { lat: number; lng: number }) => {
+    setSelectedLocation(coordinates);
+  };
+
+  const handleSearch = () => {
+    if (searchLocation.trim()) {
+      // Redirigir a la página de búsqueda con parámetros
+      const params = new URLSearchParams({
+        location: searchLocation,
+        ...(selectedLocation && {
+          lat: selectedLocation.lat.toString(),
+          lng: selectedLocation.lng.toString()
+        })
+      });
+      router.push(`/auth/register?type=client&${params.toString()}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -117,6 +140,50 @@ export default function LandingPage() {
               Encuentra el servicio perfecto para tu hogar con total seguridad y tranquilidad.
             </p>
             
+            {/* Buscador principal */}
+            <div className="max-w-2xl mx-auto mb-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 20 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100"
+              >
+                <div className="text-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Encuentra empleadas cerca de ti
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Ingresa tu ubicación para ver empleadas disponibles
+                  </p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <AutocompleteInput
+                      value={searchLocation}
+                      onChange={setSearchLocation}
+                      onPlaceSelect={handleLocationSelect}
+                      placeholder="¿Dónde necesitas el servicio? Ej: Palermo, Buenos Aires"
+                      className="w-full"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSearch}
+                    disabled={!searchLocation.trim()}
+                    className="btn-primary px-8 py-3 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Buscar Empleadas
+                  </button>
+                </div>
+                
+                <div className="mt-4 text-center">
+                  <p className="text-xs text-gray-500">
+                    ✓ Empleadas verificadas • ✓ Precios transparentes • ✓ Disponibilidad inmediata
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Link href="/auth/register?type=client" className="btn-primary text-lg px-8 py-4">
                 Soy una Familia

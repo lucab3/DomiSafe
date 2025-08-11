@@ -23,6 +23,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import LocationInput from '@/components/LocationInput';
 import InteractiveMap from '@/components/InteractiveMap';
 import { motion } from 'framer-motion';
+import { calculateDistance } from '@/utils/googleMaps';
 
 interface Employee {
   id: string;
@@ -37,6 +38,8 @@ interface Employee {
   total_reviews: number;
   current_status: string;
   distance_km?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 export default function ClientDashboard() {
@@ -77,6 +80,8 @@ export default function ClientDashboard() {
       average_rating: 4.8,
       total_reviews: 24,
       current_status: 'available',
+      latitude: -34.5875,
+      longitude: -58.3974,
       distance_km: 2.5
     },
     {
@@ -91,6 +96,8 @@ export default function ClientDashboard() {
       average_rating: 4.9,
       total_reviews: 31,
       current_status: 'available',
+      latitude: -34.5889,
+      longitude: -58.3993,
       distance_km: 3.8
     },
     {
@@ -105,6 +112,8 @@ export default function ClientDashboard() {
       average_rating: 4.7,
       total_reviews: 18,
       current_status: 'available',
+      latitude: -34.5998,
+      longitude: -58.4314,
       distance_km: 5.2
     },
     {
@@ -119,6 +128,8 @@ export default function ClientDashboard() {
       average_rating: 4.6,
       total_reviews: 22,
       current_status: 'working',
+      latitude: -34.5627,
+      longitude: -58.4546,
       distance_km: 7.1
     },
     {
@@ -133,6 +144,8 @@ export default function ClientDashboard() {
       average_rating: 5.0,
       total_reviews: 15,
       current_status: 'available',
+      latitude: -34.6214,
+      longitude: -58.3731,
       distance_km: 8.9
     }
   ];
@@ -195,6 +208,12 @@ export default function ClientDashboard() {
         }
       );
     }
+  };
+
+  const handleLocationSelect = (location: { address: string; lat: number; lng: number }) => {
+    setUserLocation({ lat: location.lat, lng: location.lng });
+    // Update filters to trigger re-filtering
+    setFilters(prev => ({ ...prev, zone: location.address.split(',')[0] }));
   };
 
   const handleRequestEmployee = async (employeeId: string) => {
@@ -285,7 +304,17 @@ export default function ClientDashboard() {
   };
 
   const applyFilters = () => {
-    let filtered = employees;
+    let filtered = employees.map(emp => {
+      // Calculate real distance if user location is available
+      if (userLocation && emp.latitude && emp.longitude) {
+        const distance = calculateDistance(
+          { lat: userLocation.lat, lng: userLocation.lng },
+          { lat: emp.latitude, lng: emp.longitude }
+        );
+        return { ...emp, distance_km: distance };
+      }
+      return emp;
+    });
 
     // Filtro por búsqueda de texto
     if (searchTerm) {
@@ -294,6 +323,11 @@ export default function ClientDashboard() {
         emp.zone.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.services_offered.some(service => service.toLowerCase().includes(searchTerm.toLowerCase()))
       );
+    }
+
+    // Filtro por distancia
+    if (filters.distance > 0) {
+      filtered = filtered.filter(emp => (emp.distance_km || 0) <= filters.distance);
     }
 
     // Filtros adicionales
@@ -321,12 +355,18 @@ export default function ClientDashboard() {
       );
     }
 
-    // Ordenar por rating y distancia
+    // Ordenar por distancia primero, luego por rating
     filtered.sort((a, b) => {
-      if (a.average_rating !== b.average_rating) {
-        return b.average_rating - a.average_rating;
+      // Si tenemos ubicación del usuario, ordenar por distancia primero
+      if (userLocation) {
+        const distanceA = a.distance_km || 999;
+        const distanceB = b.distance_km || 999;
+        if (distanceA !== distanceB) {
+          return distanceA - distanceB;
+        }
       }
-      return (a.distance_km || 0) - (b.distance_km || 0);
+      // Luego por rating
+      return b.average_rating - a.average_rating;
     });
 
     setFilteredEmployees(filtered);
@@ -537,6 +577,26 @@ export default function ClientDashboard() {
                       value={filters.max_rate || ''}
                       onChange={(e) => setFilters({...filters, max_rate: parseInt(e.target.value) || 0})}
                     />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="label-field">
+                    Distancia máxima: {filters.distance}km
+                    {userLocation && <span className="text-green-600 ml-2">📍 Ubicación detectada</span>}
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="50"
+                    value={filters.distance}
+                    onChange={(e) => setFilters({...filters, distance: parseInt(e.target.value)})}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>1km</span>
+                    <span>25km</span>
+                    <span>50km+</span>
                   </div>
                 </div>
                 

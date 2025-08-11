@@ -22,6 +22,9 @@ import {
   LogOut
 } from 'lucide-react';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import ChatWidget from '@/components/ChatWidget';
+import AdminCalendar from '@/components/AdminCalendar';
+import AdminMap from '@/components/AdminMap';
 import { motion } from 'framer-motion';
 
 interface DashboardStats {
@@ -38,6 +41,39 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [showEmployeesToClients, setShowEmployeesToClients] = useState(true);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [employeeForm, setEmployeeForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    photo_url: '',
+    address: '',
+    zone: '',
+    services_offered: [],
+    languages: ['Español'],
+    experience_years: 0,
+    hourly_rate: 1000,
+    availability: 'Lunes a Viernes 9:00-17:00',
+    experience_description: '',
+    references: ''
+  });
+  const [showChat, setShowChat] = useState(false);
+  const [chatRequest, setChatRequest] = useState(null);
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [editingService, setEditingService] = useState(null);
+  const [serviceForm, setServiceForm] = useState({
+    client_name: '',
+    employee_id: '',
+    service_type: '',
+    service_date: '',
+    start_time: '',
+    end_time: '',
+    address: '',
+    hourly_rate: 1200,
+    status: 'scheduled'
+  });
   const [stats, setStats] = useState<DashboardStats>({
     total_employees: 0,
     total_clients: 0,
@@ -52,6 +88,7 @@ export default function AdminDashboard() {
     loadDashboardData();
     loadSettings();
     loadPendingRequests();
+    loadEmployees();
   }, []);
 
   const loadDashboardData = async () => {
@@ -100,6 +137,113 @@ export default function AdminDashboard() {
     }
   };
 
+  const loadEmployees = async () => {
+    try {
+      const response = await fetch('/api/employees?admin_view=true');
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data.employees || []);
+      }
+    } catch (error) {
+      console.error('Error loading employees:', error);
+    }
+  };
+
+  const openEmployeeModal = (employee = null) => {
+    if (employee) {
+      setEditingEmployee(employee);
+      setEmployeeForm({
+        name: employee.name || '',
+        email: employee.email || '',
+        phone: employee.phone || '',
+        photo_url: employee.photo_url || '',
+        address: employee.address || '',
+        zone: employee.zone || '',
+        services_offered: employee.services_offered || [],
+        languages: employee.languages || ['Español'],
+        experience_years: employee.experience_years || 0,
+        hourly_rate: employee.hourly_rate || 1000,
+        availability: employee.availability || 'Lunes a Viernes 9:00-17:00',
+        experience_description: employee.experience_description || '',
+        references: employee.references || ''
+      });
+    } else {
+      setEditingEmployee(null);
+      setEmployeeForm({
+        name: '',
+        email: '',
+        phone: '',
+        photo_url: '',
+        address: '',
+        zone: '',
+        services_offered: [],
+        languages: ['Español'],
+        experience_years: 0,
+        hourly_rate: 1000,
+        availability: 'Lunes a Viernes 9:00-17:00',
+        experience_description: '',
+        references: ''
+      });
+    }
+    setShowEmployeeModal(true);
+  };
+
+  const handleSaveEmployee = async () => {
+    try {
+      const url = editingEmployee 
+        ? `/api/employees?employee_id=${editingEmployee.id}`
+        : '/api/employees';
+      
+      const method = editingEmployee ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(employeeForm),
+      });
+
+      if (response.ok) {
+        await loadEmployees();
+        setShowEmployeeModal(false);
+        alert(editingEmployee ? 'Empleada actualizada exitosamente' : 'Empleada creada exitosamente');
+      } else {
+        throw new Error('Error al guardar empleada');
+      }
+    } catch (error) {
+      console.error('Error saving employee:', error);
+      alert('Error al guardar empleada');
+    }
+  };
+
+  const handleDeleteEmployee = async (employeeId: string) => {
+    if (!confirm('¿Estás seguro de que deseas desactivar esta empleada?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/employees?employee_id=${employeeId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await loadEmployees();
+        alert('Empleada desactivada exitosamente');
+      } else {
+        throw new Error('Error al desactivar empleada');
+      }
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      alert('Error al desactivar empleada');
+    }
+  };
+
+  const openChat = (request: any) => {
+    setChatRequest(request);
+    setShowChat(true);
+  };
+
   const assignEmployeeToRequest = async (requestId: string, employeeId: string) => {
     try {
       const response = await fetch(`/api/requests?request_id=${requestId}`, {
@@ -145,6 +289,65 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Error toggling employee visibility:', error);
+    }
+  };
+
+  const openServiceModal = (service = null) => {
+    if (service) {
+      setEditingService(service);
+      setServiceForm({
+        client_name: service.client_name || '',
+        employee_id: service.employee_id || '',
+        service_type: service.service_type || '',
+        service_date: service.service_date || '',
+        start_time: service.start_time || '',
+        end_time: service.end_time || '',
+        address: service.address || '',
+        hourly_rate: service.hourly_rate || 1200,
+        status: service.status || 'scheduled'
+      });
+    } else {
+      setEditingService(null);
+      setServiceForm({
+        client_name: '',
+        employee_id: '',
+        service_type: '',
+        service_date: '',
+        start_time: '',
+        end_time: '',
+        address: '',
+        hourly_rate: 1200,
+        status: 'scheduled'
+      });
+    }
+    setShowServiceModal(true);
+  };
+
+  const handleSaveService = async () => {
+    try {
+      const url = editingService 
+        ? `/api/services?service_id=${editingService.id}`
+        : '/api/services';
+      
+      const method = editingService ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(serviceForm),
+      });
+
+      if (response.ok) {
+        setShowServiceModal(false);
+        alert(editingService ? 'Servicio actualizado exitosamente' : 'Servicio creado exitosamente');
+      } else {
+        throw new Error('Error al guardar servicio');
+      }
+    } catch (error) {
+      console.error('Error saving service:', error);
+      alert('Error al guardar servicio');
     }
   };
 
@@ -413,6 +616,19 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Mapa de empleadas en tiempo real */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <AdminMap 
+                onEmployeeClick={(employee) => {
+                  alert(`Empleada: ${employee.name}\nEstado: ${employee.status}\nZona: ${employee.zone}`);
+                }}
+              />
+            </motion.div>
           </motion.div>
         )}
 
@@ -507,8 +723,11 @@ export default function AdminDashboard() {
                         ))}
                       </div>
                       <div className="flex space-x-2">
-                        <button className="btn-primary">
-                          Contactar Cliente
+                        <button 
+                          onClick={() => openChat(request)}
+                          className="btn-primary"
+                        >
+                          💬 Chat con Cliente
                         </button>
                         <button className="btn-outline">
                           Rechazar Solicitud
@@ -532,7 +751,10 @@ export default function AdminDashboard() {
               <h3 className="text-xl font-semibold text-gray-900">
                 Gestión de Empleadas
               </h3>
-              <button className="btn-primary">
+              <button 
+                onClick={() => openEmployeeModal()}
+                className="btn-primary"
+              >
                 Agregar Empleada
               </button>
             </div>
@@ -607,23 +829,18 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {/* Mock data with photos */}
-                    {[
-                      { name: 'Rosa Martínez', zone: 'Palermo', rating: 4.8, status: 'active', photo: 'https://images.unsplash.com/photo-1494790108755-2616c0763c99?w=400' },
-                      { name: 'Carmen Rodríguez', zone: 'Recoleta', rating: 4.9, status: 'active', photo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400' },
-                      { name: 'Lucía Fernández', zone: 'Villa Crespo', rating: 4.7, status: 'working', photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400' }
-                    ].map((employee, index) => (
+                    {employees.slice(0, 10).map((employee, index) => (
                       <tr key={index}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <img 
-                              src={employee.photo} 
+                              src={employee.photo_url} 
                               alt={employee.name}
                               className="w-10 h-10 rounded-full object-cover"
                             />
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{employee.name}</div>
-                              <div className="text-sm text-gray-500">ID: EMP-{String(index + 1).padStart(3, '0')}</div>
+                              <div className="text-sm text-gray-500">{employee.email}</div>
                             </div>
                           </div>
                         </td>
@@ -633,23 +850,32 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                            <span className="ml-1 text-sm text-gray-900">{employee.rating}</span>
+                            <span className="ml-1 text-sm text-gray-900">{employee.average_rating}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 text-xs rounded-full ${
-                            employee.status === 'active' 
+                            employee.current_status === 'active' 
                               ? 'bg-green-100 text-green-800'
+                              : employee.current_status === 'working'
+                              ? 'bg-blue-100 text-blue-800'
                               : 'bg-yellow-100 text-yellow-800'
                           }`}>
-                            {employee.status === 'active' ? 'Disponible' : 'Trabajando'}
+                            {employee.current_status === 'active' ? 'Disponible' : 
+                             employee.current_status === 'working' ? 'Trabajando' : 'Pendiente'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button className="text-primary-600 hover:text-primary-900 mr-2">
+                          <button 
+                            onClick={() => openEmployeeModal(employee)}
+                            className="text-primary-600 hover:text-primary-900 mr-2"
+                          >
                             Editar
                           </button>
-                          <button className="text-red-600 hover:text-red-900">
+                          <button 
+                            onClick={() => handleDeleteEmployee(employee.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
                             Desactivar
                           </button>
                         </td>
@@ -662,8 +888,45 @@ export default function AdminDashboard() {
           </motion.div>
         )}
 
+        {activeTab === 'services' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Calendario de Servicios
+              </h3>
+              <button 
+                onClick={() => openServiceModal()}
+                className="btn-primary"
+              >
+                Programar Servicio
+              </button>
+            </div>
+            
+            <AdminCalendar 
+              onEventClick={(event) => {
+                openServiceModal({
+                  id: event.id,
+                  client_name: event.client_name,
+                  employee_id: event.employee_id || 'emp_1',
+                  service_type: event.service_type,
+                  service_date: '2025-08-11',
+                  start_time: event.start_time,
+                  end_time: event.end_time,
+                  address: event.address,
+                  hourly_rate: event.hourly_rate,
+                  status: event.status
+                });
+              }}
+            />
+          </motion.div>
+        )}
+
         {/* Otros tabs se renderizarían aquí con contenido similar */}
-        {activeTab !== 'overview' && activeTab !== 'employees' && (
+        {activeTab !== 'overview' && activeTab !== 'employees' && activeTab !== 'requests' && activeTab !== 'services' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -681,6 +944,416 @@ export default function AdminDashboard() {
           </motion.div>
         )}
       </div>
+
+      {/* Modal de empleada */}
+      {showEmployeeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {editingEmployee ? 'Editar Empleada' : 'Nueva Empleada'}
+                </h2>
+                <button
+                  onClick={() => setShowEmployeeModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <form className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nombre completo *
+                  </label>
+                  <input
+                    type="text"
+                    value={employeeForm.name}
+                    onChange={(e) => setEmployeeForm({...employeeForm, name: e.target.value})}
+                    className="input-field"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={employeeForm.email}
+                    onChange={(e) => setEmployeeForm({...employeeForm, email: e.target.value})}
+                    className="input-field"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Teléfono *
+                  </label>
+                  <input
+                    type="tel"
+                    value={employeeForm.phone}
+                    onChange={(e) => setEmployeeForm({...employeeForm, phone: e.target.value})}
+                    className="input-field"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Zona *
+                  </label>
+                  <input
+                    type="text"
+                    value={employeeForm.zone}
+                    onChange={(e) => setEmployeeForm({...employeeForm, zone: e.target.value})}
+                    className="input-field"
+                    placeholder="Ej: Palermo"
+                    required
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Dirección
+                  </label>
+                  <input
+                    type="text"
+                    value={employeeForm.address}
+                    onChange={(e) => setEmployeeForm({...employeeForm, address: e.target.value})}
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    URL de foto
+                  </label>
+                  <input
+                    type="url"
+                    value={employeeForm.photo_url}
+                    onChange={(e) => setEmployeeForm({...employeeForm, photo_url: e.target.value})}
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tarifa por hora ($)
+                  </label>
+                  <input
+                    type="number"
+                    value={employeeForm.hourly_rate}
+                    onChange={(e) => setEmployeeForm({...employeeForm, hourly_rate: parseInt(e.target.value) || 0})}
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Años de experiencia
+                  </label>
+                  <input
+                    type="number"
+                    value={employeeForm.experience_years}
+                    onChange={(e) => setEmployeeForm({...employeeForm, experience_years: parseInt(e.target.value) || 0})}
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Disponibilidad
+                  </label>
+                  <input
+                    type="text"
+                    value={employeeForm.availability}
+                    onChange={(e) => setEmployeeForm({...employeeForm, availability: e.target.value})}
+                    className="input-field"
+                    placeholder="Ej: Lunes a Viernes 9:00-17:00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Servicios ofrecidos
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['cleaning', 'cooking', 'babysitting', 'elderly_care', 'event'].map((service) => (
+                      <label key={service} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={employeeForm.services_offered.includes(service)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEmployeeForm({...employeeForm, services_offered: [...employeeForm.services_offered, service]});
+                            } else {
+                              setEmployeeForm({...employeeForm, services_offered: employeeForm.services_offered.filter(s => s !== service)});
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <span className="text-sm">
+                          {service === 'cleaning' ? 'Limpieza' :
+                           service === 'cooking' ? 'Cocina' :
+                           service === 'babysitting' ? 'Niñera' :
+                           service === 'elderly_care' ? 'Adultos mayores' :
+                           'Eventos'}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Idiomas
+                  </label>
+                  <input
+                    type="text"
+                    value={employeeForm.languages.join(', ')}
+                    onChange={(e) => setEmployeeForm({...employeeForm, languages: e.target.value.split(', ').filter(lang => lang.trim())})}
+                    className="input-field"
+                    placeholder="Español, Inglés, Italiano"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descripción de experiencia
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={employeeForm.experience_description}
+                    onChange={(e) => setEmployeeForm({...employeeForm, experience_description: e.target.value})}
+                    className="input-field"
+                    placeholder="Describe la experiencia y especialidades..."
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Referencias
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={employeeForm.references}
+                    onChange={(e) => setEmployeeForm({...employeeForm, references: e.target.value})}
+                    className="input-field"
+                    placeholder="Referencias de trabajos anteriores..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowEmployeeModal(false)}
+                  className="btn-outline"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEmployee}
+                  className="btn-primary"
+                >
+                  {editingEmployee ? 'Actualizar' : 'Crear'} Empleada
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de servicio */}
+      {showServiceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {editingService ? 'Editar Servicio' : 'Programar Nuevo Servicio'}
+                </h2>
+                <button
+                  onClick={() => setShowServiceModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <form className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nombre del cliente *
+                  </label>
+                  <input
+                    type="text"
+                    value={serviceForm.client_name}
+                    onChange={(e) => setServiceForm({...serviceForm, client_name: e.target.value})}
+                    className="input-field"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Empleada *
+                  </label>
+                  <select
+                    value={serviceForm.employee_id}
+                    onChange={(e) => setServiceForm({...serviceForm, employee_id: e.target.value})}
+                    className="input-field"
+                    required
+                  >
+                    <option value="">Seleccionar empleada</option>
+                    {employees.map((employee) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.name} - {employee.zone}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de servicio *
+                  </label>
+                  <select
+                    value={serviceForm.service_type}
+                    onChange={(e) => setServiceForm({...serviceForm, service_type: e.target.value})}
+                    className="input-field"
+                    required
+                  >
+                    <option value="">Seleccionar servicio</option>
+                    <option value="Limpieza general">Limpieza general</option>
+                    <option value="Cocina">Cocina</option>
+                    <option value="Cuidado niños">Cuidado niños</option>
+                    <option value="Cuidado adultos mayores">Cuidado adultos mayores</option>
+                    <option value="Evento familiar">Evento familiar</option>
+                    <option value="Cocina y limpieza">Cocina y limpieza</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Fecha del servicio *
+                  </label>
+                  <input
+                    type="date"
+                    value={serviceForm.service_date}
+                    onChange={(e) => setServiceForm({...serviceForm, service_date: e.target.value})}
+                    className="input-field"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Hora de inicio *
+                  </label>
+                  <input
+                    type="time"
+                    value={serviceForm.start_time}
+                    onChange={(e) => setServiceForm({...serviceForm, start_time: e.target.value})}
+                    className="input-field"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Hora de fin *
+                  </label>
+                  <input
+                    type="time"
+                    value={serviceForm.end_time}
+                    onChange={(e) => setServiceForm({...serviceForm, end_time: e.target.value})}
+                    className="input-field"
+                    required
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Dirección del servicio *
+                  </label>
+                  <input
+                    type="text"
+                    value={serviceForm.address}
+                    onChange={(e) => setServiceForm({...serviceForm, address: e.target.value})}
+                    className="input-field"
+                    placeholder="Dirección completa donde se realizará el servicio"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tarifa por hora ($)
+                  </label>
+                  <input
+                    type="number"
+                    value={serviceForm.hourly_rate}
+                    onChange={(e) => setServiceForm({...serviceForm, hourly_rate: parseInt(e.target.value) || 0})}
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Estado del servicio
+                  </label>
+                  <select
+                    value={serviceForm.status}
+                    onChange={(e) => setServiceForm({...serviceForm, status: e.target.value})}
+                    className="input-field"
+                  >
+                    <option value="scheduled">Programado</option>
+                    <option value="in_progress">En progreso</option>
+                    <option value="completed">Completado</option>
+                    <option value="cancelled">Cancelado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowServiceModal(false)}
+                  className="btn-outline"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveService}
+                  className="btn-primary"
+                >
+                  {editingService ? 'Actualizar' : 'Crear'} Servicio
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Widget */}
+      {showChat && chatRequest && (
+        <ChatWidget
+          requestId={chatRequest.id}
+          clientName={chatRequest.clients?.name || 'Cliente'}
+          onClose={() => setShowChat(false)}
+        />
+      )}
     </div>
   );
 }

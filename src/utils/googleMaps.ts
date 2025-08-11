@@ -9,6 +9,11 @@ export interface PlaceSuggestion {
     main_text: string;
     secondary_text: string;
   };
+  // OSM specific fields
+  osm_id?: string;
+  osm_type?: string;
+  lat?: number;
+  lon?: number;
 }
 
 export interface Coordinates {
@@ -16,7 +21,27 @@ export interface Coordinates {
   lng: number;
 }
 
-// Mock Google Places API for development
+// Real Google Places API integration
+export const getPlaceSuggestions = async (input: string): Promise<PlaceSuggestion[]> => {
+  if (!input || input.length < 2) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(`/api/places/autocomplete?input=${encodeURIComponent(input)}`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.suggestions || [];
+    }
+  } catch (error) {
+    console.error('Error fetching place suggestions:', error);
+  }
+
+  // Fallback to mock data if API fails
+  return getMockPlaceSuggestions(input);
+};
+
+// Keep mock as fallback
 export const getMockPlaceSuggestions = async (input: string): Promise<PlaceSuggestion[]> => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 300));
@@ -447,8 +472,40 @@ function toRad(deg: number): number {
   return deg * (Math.PI/180);
 }
 
-// Mock function to get place details including formatted address
-export const getPlaceDetails = async (placeId: string) => {
+// Real Places Details API integration (works with both OSM and Google)
+export const getPlaceDetails = async (placeId: string, suggestion?: PlaceSuggestion) => {
+  if (!placeId) return null;
+
+  try {
+    // Build query parameters for OSM data if available
+    const params = new URLSearchParams({ place_id: placeId });
+    
+    if (suggestion) {
+      if (suggestion.osm_id) params.append('osm_id', suggestion.osm_id);
+      if (suggestion.osm_type) params.append('osm_type', suggestion.osm_type);
+      if (suggestion.lat) params.append('lat', suggestion.lat.toString());
+      if (suggestion.lon) params.append('lon', suggestion.lon.toString());
+      if (suggestion.description) params.append('description', suggestion.description);
+      if (suggestion.main_text) params.append('main_text', suggestion.main_text);
+    }
+
+    const response = await fetch(`/api/places/details?${params.toString()}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.place) {
+        return data.place;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching place details:', error);
+  }
+
+  // Fallback to mock data if API fails
+  return getMockPlaceDetails(placeId);
+};
+
+// Keep mock as fallback
+export const getMockPlaceDetails = async (placeId: string) => {
   await new Promise(resolve => setTimeout(resolve, 200));
   
   // Get coordinates and create place details dynamically

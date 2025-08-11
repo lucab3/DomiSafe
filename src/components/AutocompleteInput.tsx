@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { MapPin, Search, X } from 'lucide-react';
-import { getMockPlaceSuggestions, PlaceSuggestion, getMockCoordinatesFromPlaceId } from '@/utils/googleMaps';
+import { getPlaceSuggestions, PlaceSuggestion, getPlaceDetails } from '@/utils/googleMaps';
 
 interface AutocompleteInputProps {
   value: string;
@@ -39,7 +39,7 @@ export default function AutocompleteInput({
 
       setIsLoading(true);
       try {
-        const results = await getMockPlaceSuggestions(value);
+        const results = await getPlaceSuggestions(value);
         setSuggestions(results);
         setShowSuggestions(results.length > 0);
         setSelectedIndex(-1);
@@ -79,8 +79,19 @@ export default function AutocompleteInput({
     setSelectedIndex(-1);
 
     try {
-      const coordinates = await getMockCoordinatesFromPlaceId(suggestion.place_id);
-      onPlaceSelect(suggestion, coordinates);
+      // For OSM suggestions, try to use coordinates directly if available
+      if (suggestion.lat && suggestion.lon) {
+        onPlaceSelect(suggestion, { lat: suggestion.lat, lng: suggestion.lon });
+        return;
+      }
+
+      // Otherwise get place details
+      const placeDetails = await getPlaceDetails(suggestion.place_id, suggestion);
+      if (placeDetails && placeDetails.geometry) {
+        onPlaceSelect(suggestion, placeDetails.geometry.location);
+      } else {
+        console.warn('No coordinates found for place');
+      }
     } catch (error) {
       console.error('Error getting coordinates:', error);
     }

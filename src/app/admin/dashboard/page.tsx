@@ -40,10 +40,10 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [showEmployeesToClients, setShowEmployeesToClients] = useState(true);
-  const [pendingRequests, setPendingRequests] = useState([]);
-  const [employees, setEmployees] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [editingEmployee, setEditingEmployee] = useState<any>(null);
   const [employeeForm, setEmployeeForm] = useState({
     name: '',
     email: '',
@@ -60,9 +60,9 @@ export default function AdminDashboard() {
     references: ''
   });
   const [showChat, setShowChat] = useState(false);
-  const [chatRequest, setChatRequest] = useState(null);
+  const [chatRequest, setChatRequest] = useState<any>(null);
   const [showServiceModal, setShowServiceModal] = useState(false);
-  const [editingService, setEditingService] = useState(null);
+  const [editingService, setEditingService] = useState<any>(null);
   const [serviceForm, setServiceForm] = useState({
     client_name: '',
     employee_id: '',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock, User, MapPin, Star } from 'lucide-react';
 
 interface ServiceEvent {

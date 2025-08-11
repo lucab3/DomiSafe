@@ -482,14 +482,24 @@ export default function ClientDashboard() {
         {/* Search and Filters */}
         <div className="mb-6">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Buscar por nombre, zona o servicio..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-10"
+            <div className="flex-1 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre o servicio..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input-field pl-10"
+                />
+              </div>
+              <LocationInput
+                placeholder="Buscar por zona o dirección..."
+                onLocationSelect={(location) => {
+                  setUserLocation({lat: location.lat, lng: location.lng});
+                  setFilters({...filters, zone: location.address.split(',')[0]});
+                }}
+                className="w-full"
               />
             </div>
             

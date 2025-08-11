@@ -1,123 +1,153 @@
 // Helper functions and services - NOT a serverless function
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// Mock data storage
+let mockUsers = [];
+let mockEmployeeRegistrations = [];
 
 // Auth Helper Functions
 const AuthHelpers = {
   async findUserByEmail(email) {
-    // Buscar usuario en clientes
-    let { data: client } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('email', email)
-      .single();
-
-    if (client) {
-      return { ...client, user_type: 'client' };
-    }
-
-    // Buscar en empleadas
-    let { data: employee } = await supabase
-      .from('employees')
-      .select('*')
-      .eq('email', email)
-      .single();
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 200));
     
-    if (employee) {
-      return { ...employee, user_type: 'employee' };
-    }
-
-    return null;
+    // Check in mock users
+    const existingUser = mockUsers.find(user => user.email === email);
+    return existingUser || null;
   },
 
   async createUser(userData, userType) {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     const newUserData = {
+      id: `${userType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       email: userData.email,
       password_hash: userData.password, // Sin bcrypt para demo
       name: userData.name,
       phone: userData.phone,
+      user_type: userType,
       is_active: userType === 'client',
       created_at: new Date().toISOString(),
       ...userData
     };
 
-    // Eliminar campos que no van en la BD
+    // Clean up fields that shouldn't be stored
     delete newUserData.password;
     delete newUserData.confirmPassword;
-    delete newUserData.user_type;
 
     if (userType === 'employee') {
       newUserData.verification_status = 'pending';
       newUserData.average_rating = 5.0;
       newUserData.total_reviews = 0;
+      
+      // Store employee registration for admin review
+      mockEmployeeRegistrations.push({
+        id: newUserData.id,
+        ...newUserData,
+        registration_date: new Date().toISOString(),
+        status: 'pending'
+      });
     } else {
       newUserData.subscription_type = 'basic';
       newUserData.referral_code = `REF${Date.now()}${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
     }
 
-    const tableName = userType === 'client' ? 'clients' : 'employees';
-    const { data: newUser, error } = await supabase
-      .from(tableName)
-      .insert([newUserData])
-      .select()
-      .single();
+    // Add to mock storage
+    mockUsers.push(newUserData);
 
-    if (error) throw error;
+    return newUserData;
+  },
 
-    return { ...newUser, user_type: userType };
+  async getEmployeeRegistrations() {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    return mockEmployeeRegistrations;
+  },
+
+  async updateEmployeeRegistration(employeeId, status) {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    const registrationIndex = mockEmployeeRegistrations.findIndex(reg => reg.id === employeeId);
+    if (registrationIndex !== -1) {
+      mockEmployeeRegistrations[registrationIndex].status = status;
+      mockEmployeeRegistrations[registrationIndex].reviewed_at = new Date().toISOString();
+      
+      // Update user status
+      const userIndex = mockUsers.findIndex(user => user.id === employeeId);
+      if (userIndex !== -1) {
+        mockUsers[userIndex].verification_status = status;
+        mockUsers[userIndex].is_active = status === 'approved';
+      }
+      
+      return mockEmployeeRegistrations[registrationIndex];
+    }
+    
+    throw new Error('Employee registration not found');
   },
 
   generateToken(payload) {
     return jwt.sign(
       payload,
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'demo-secret-key',
       { expiresIn: '7d' }
     );
   }
 };
 
+// Mock employees data for demo
+const mockEmployees = [
+  {
+    id: 'emp_1',
+    name: 'Rosa Martínez',
+    email: 'rosa@example.com',
+    phone: '+54 11 1234-5678',
+    zone: 'Palermo',
+    services_offered: ['cleaning', 'cooking'],
+    languages: ['Español', 'Inglés'],
+    experience_years: 8,
+    hourly_rate: 1200,
+    average_rating: 4.8,
+    total_reviews: 24,
+    is_active: true,
+    verification_status: 'approved',
+    latitude: -34.5875,
+    longitude: -58.3974
+  }
+];
+
 // Employee Helper Functions
 const EmployeeHelpers = {
   async findAll(filters = {}) {
-    const { zone, services, min_rating, latitude, longitude, radius = 10 } = filters;
-
-    let query = supabase
-      .from('employees')
-      .select(`
-        *,
-        reviews (
-          rating,
-          comment,
-          created_at
-        )
-      `)
-      .eq('is_active', true)
-      .eq('verification_status', 'approved');
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const { zone, services, min_rating } = filters;
+    
+    let employees = [...mockEmployees].filter(emp => 
+      emp.is_active && emp.verification_status === 'approved'
+    );
 
     if (zone) {
-      query = query.ilike('zone', `%${zone}%`);
+      employees = employees.filter(emp => 
+        emp.zone.toLowerCase().includes(zone.toLowerCase())
+      );
     }
 
     if (services) {
       const serviceArray = services.split(',');
-      query = query.contains('services_offered', serviceArray);
+      employees = employees.filter(emp =>
+        serviceArray.some(service => emp.services_offered.includes(service))
+      );
     }
 
     if (min_rating) {
-      query = query.gte('average_rating', parseFloat(min_rating));
+      employees = employees.filter(emp => 
+        emp.average_rating >= parseFloat(min_rating)
+      );
     }
 
-    const { data: employees, error } = await query.order('average_rating', { ascending: false });
-    
-    if (error) throw error;
-
-    return employees;
+    return employees.sort((a, b) => b.average_rating - a.average_rating);
   },
 
   calculateDistance(lat1, lon1, lat2, lon2) {

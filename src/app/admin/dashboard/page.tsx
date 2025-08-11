@@ -41,6 +41,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [showEmployeesToClients, setShowEmployeesToClients] = useState(true);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [employeeRegistrations, setEmployeeRegistrations] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<any>(null);
@@ -88,6 +89,7 @@ export default function AdminDashboard() {
     loadDashboardData();
     loadSettings();
     loadPendingRequests();
+    loadEmployeeRegistrations();
     loadEmployees();
   }, []);
 
@@ -134,6 +136,22 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Error loading requests:', error);
+    }
+  };
+
+  const loadEmployeeRegistrations = async () => {
+    try {
+      const response = await fetch('/api/admin/employee-registrations');
+      if (response.ok) {
+        const data = await response.json();
+        setEmployeeRegistrations(data.registrations || []);
+        
+        // Update pending approvals count
+        const pendingCount = data.registrations?.filter(reg => reg.status === 'pending').length || 0;
+        setStats(prev => ({ ...prev, pending_approvals: pendingCount }));
+      }
+    } catch (error) {
+      console.error('Error loading employee registrations:', error);
     }
   };
 
@@ -264,6 +282,31 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error assigning employee:', error);
       alert('Error al asignar empleada');
+    }
+  };
+
+  const handleEmployeeRegistrationDecision = async (employeeId: string, status: 'approved' | 'rejected') => {
+    try {
+      const response = await fetch('/api/admin/employee-registrations', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          employee_id: employeeId,
+          status
+        }),
+      });
+
+      if (response.ok) {
+        alert(`Empleada ${status === 'approved' ? 'aprobada' : 'rechazada'} exitosamente`);
+        await loadEmployeeRegistrations(); // Recargar registros
+      } else {
+        alert('Error al procesar la decisión');
+      }
+    } catch (error) {
+      console.error('Error processing employee registration:', error);
+      alert('Error al procesar la decisión');
     }
   };
 
@@ -638,17 +681,105 @@ export default function AdminDashboard() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-gray-900">
-                Solicitudes de Empleadas ({pendingRequests.length})
-              </h3>
-              <button 
-                onClick={loadPendingRequests}
-                className="btn-secondary"
-              >
-                Actualizar
-              </button>
+            {/* Employee Registrations */}
+            <div className="card">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Registros de Empleadas ({employeeRegistrations.filter(reg => reg.status === 'pending').length} pendientes)
+                </h3>
+                <button 
+                  onClick={loadEmployeeRegistrations}
+                  className="btn-secondary"
+                >
+                  Actualizar
+                </button>
+              </div>
+
+              {employeeRegistrations.filter(reg => reg.status === 'pending').length === 0 ? (
+                <div className="text-center py-8">
+                  <UserCheck className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">
+                    No hay registros pendientes
+                  </h4>
+                  <p className="text-gray-600">Todas las empleadas han sido procesadas</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {employeeRegistrations.filter(reg => reg.status === 'pending').map((registration) => (
+                    <div key={registration.id} className="border rounded-lg p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-primary-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900">{registration.name}</h4>
+                              <p className="text-sm text-gray-600">{registration.email}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
+                            <div>
+                              <span className="font-medium">Teléfono:</span> {registration.phone}
+                            </div>
+                            <div>
+                              <span className="font-medium">Zona:</span> {registration.zone}
+                            </div>
+                            <div>
+                              <span className="font-medium">Experiencia:</span> {registration.experience_years} años
+                            </div>
+                            <div>
+                              <span className="font-medium">Tarifa:</span> ${registration.hourly_rate}/hora
+                            </div>
+                          </div>
+
+                          <div className="mt-3">
+                            <span className="font-medium text-sm text-gray-900">Servicios:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {registration.services_offered?.map((service: string, index: number) => (
+                                <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                                  {service}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex space-x-2 ml-4">
+                          <button
+                            onClick={() => handleEmployeeRegistrationDecision(registration.id, 'approved')}
+                            className="btn-primary text-sm px-3 py-1"
+                          >
+                            Aprobar
+                          </button>
+                          <button
+                            onClick={() => handleEmployeeRegistrationDecision(registration.id, 'rejected')}
+                            className="btn-outline text-sm px-3 py-1 border-red-300 text-red-700 hover:bg-red-50"
+                          >
+                            Rechazar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* Client Requests */}
+            <div className="card">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Solicitudes de Clientes ({pendingRequests.length})
+                </h3>
+                <button 
+                  onClick={loadPendingRequests}
+                  className="btn-secondary"
+                >
+                  Actualizar
+                </button>
+              </div>
 
             {pendingRequests.length === 0 ? (
               <div className="card text-center py-12">
@@ -738,6 +869,7 @@ export default function AdminDashboard() {
                 ))}
               </div>
             )}
+            </div>
           </motion.div>
         )}
 

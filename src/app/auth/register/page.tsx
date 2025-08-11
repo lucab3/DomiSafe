@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Shield, Mail, Lock, User, Phone, MapPin, Eye, EyeOff } from 'lucide-react';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import LocationInput from '@/components/LocationInput';
 import { motion } from 'framer-motion';
 
 function RegisterPageContent() {
@@ -281,15 +282,22 @@ function RegisterPageContent() {
                     <MapPin className="w-4 h-4 inline mr-2" />
                     Zona de Trabajo
                   </label>
-                  <input
-                    type="text"
-                    name="zone"
-                    value={formData.zone}
-                    onChange={handleInputChange}
-                    className="input-field"
-                    placeholder="Ej: Palermo, Recoleta, Belgrano"
-                    required
+                  <LocationInput
+                    placeholder="Buscar zona de trabajo..."
+                    onLocationSelect={(location) => {
+                      setFormData({
+                        ...formData, 
+                        zone: location.address.split(',')[0]
+                      });
+                    }}
                   />
+                  {formData.zone && (
+                    <div className="mt-2">
+                      <span className="inline-flex items-center px-3 py-1 bg-primary-100 text-primary-700 text-sm rounded-full">
+                        {formData.zone}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">

@@ -38,6 +38,26 @@ export const getMockPlaceSuggestions = async (input: string): Promise<PlaceSugge
       }
     },
     {
+      place_id: 'street_1',
+      description: 'Av. Santa Fe, Palermo, Ciudad Autónoma de Buenos Aires',
+      main_text: 'Av. Santa Fe',
+      secondary_text: 'Palermo, Ciudad Autónoma de Buenos Aires',
+      structured_formatting: {
+        main_text: 'Av. Santa Fe',
+        secondary_text: 'Palermo, Ciudad Autónoma de Buenos Aires'
+      }
+    },
+    {
+      place_id: 'street_2',
+      description: 'Av. Córdoba, Palermo, Ciudad Autónoma de Buenos Aires',
+      main_text: 'Av. Córdoba',
+      secondary_text: 'Palermo, Ciudad Autónoma de Buenos Aires',
+      structured_formatting: {
+        main_text: 'Av. Córdoba',
+        secondary_text: 'Palermo, Ciudad Autónoma de Buenos Aires'
+      }
+    },
+    {
       place_id: 'place_2',
       description: 'Recoleta, Ciudad Autónoma de Buenos Aires, Argentina',
       main_text: 'Recoleta',
@@ -45,6 +65,26 @@ export const getMockPlaceSuggestions = async (input: string): Promise<PlaceSugge
       structured_formatting: {
         main_text: 'Recoleta',
         secondary_text: 'Ciudad Autónoma de Buenos Aires, Argentina'
+      }
+    },
+    {
+      place_id: 'street_3',
+      description: 'Av. Alvear, Recoleta, Ciudad Autónoma de Buenos Aires',
+      main_text: 'Av. Alvear',
+      secondary_text: 'Recoleta, Ciudad Autónoma de Buenos Aires',
+      structured_formatting: {
+        main_text: 'Av. Alvear',
+        secondary_text: 'Recoleta, Ciudad Autónoma de Buenos Aires'
+      }
+    },
+    {
+      place_id: 'street_4',
+      description: 'Av. Las Heras, Recoleta, Ciudad Autónoma de Buenos Aires',
+      main_text: 'Av. Las Heras',
+      secondary_text: 'Recoleta, Ciudad Autónoma de Buenos Aires',
+      structured_formatting: {
+        main_text: 'Av. Las Heras',
+        secondary_text: 'Recoleta, Ciudad Autónoma de Buenos Aires'
       }
     },
     {
@@ -346,7 +386,11 @@ export const getMockCoordinatesFromPlaceId = async (placeId: string): Promise<Co
   const placeCoordinates: { [key: string]: Coordinates } = {
     // CABA
     'place_1': { lat: -34.5875, lng: -58.3974 }, // Palermo
+    'street_1': { lat: -34.5901, lng: -58.3989 }, // Av. Santa Fe, Palermo
+    'street_2': { lat: -34.5994, lng: -58.3925 }, // Av. Córdoba, Palermo
     'place_2': { lat: -34.5889, lng: -58.3993 }, // Recoleta
+    'street_3': { lat: -34.5934, lng: -58.3831 }, // Av. Alvear, Recoleta
+    'street_4': { lat: -34.5890, lng: -58.3975 }, // Av. Las Heras, Recoleta
     'place_3': { lat: -34.5627, lng: -58.4546 }, // Belgrano
     'place_4': { lat: -34.5998, lng: -58.4314 }, // Villa Crespo
     'place_5': { lat: -34.6214, lng: -58.3731 }, // San Telmo

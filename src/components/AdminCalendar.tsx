@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Clock, User, MapPin, Star } from 'lucide-rea
 
 interface ServiceEvent {
   id: string;
+  employee_id?: string;
   employee_name: string;
   employee_photo: string;
   client_name: string;

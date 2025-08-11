@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Users, 
+  User,
   UserCheck, 
   Calendar, 
   TrendingUp, 

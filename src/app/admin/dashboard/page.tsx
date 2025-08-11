@@ -51,7 +51,7 @@ export default function AdminDashboard() {
     photo_url: '',
     address: '',
     zone: '',
-    services_offered: [],
+    services_offered: [] as string[],
     languages: ['Español'],
     experience_years: 0,
     hourly_rate: 1000,
